@@ -194,8 +194,6 @@ class TelemetryTest: XCTestCase {
         
         XCTAssertEqual(1, observer.events.count) // "completed" is one event
     }
-    
-
 
     
 }
