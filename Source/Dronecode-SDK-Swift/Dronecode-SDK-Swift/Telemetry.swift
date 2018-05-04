@@ -89,4 +89,22 @@ public class Telemetry {
             return Disposables.create()
         }.subscribeOn(self.scheduler)
     }
+    
+    public func getHomePositionObservable() -> Observable<Position> {
+        return Observable.create { observer in
+            let homeRequest = Dronecore_Rpc_Telemetry_SubscribeHomeRequest()
+            
+            do {
+                let call = try self.service.subscribehome(homeRequest, completion: nil)
+                while let response = try? call.receive() {
+                    let position = Position(latitudeDeg: response.home.latitudeDeg, longitudeDeg: response.home.longitudeDeg, absoluteAltitudeM: response.home.absoluteAltitudeM, relativeAltitudeM: response.home.relativeAltitudeM)
+                    observer.onNext(position)
+                }
+            } catch {
+                observer.onError("Failed to subscribe to home stream")
+            }
+            
+            return Disposables.create()
+            }.subscribeOn(self.scheduler)
+    }
 }

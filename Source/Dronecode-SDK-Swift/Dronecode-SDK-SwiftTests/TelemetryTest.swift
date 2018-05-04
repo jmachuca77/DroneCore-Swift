@@ -6,6 +6,8 @@ import XCTest
 class TelemetryTest: XCTestCase {
     let scheduler = MainScheduler.instance
  
+    
+    // MARK: - POSITION
     func testPositionObservableEmitsNothingWhenNoEvent() {
         let fakeService = Dronecore_Rpc_Telemetry_TelemetryServiceServiceTestStub()
         let fakeCall = Dronecore_Rpc_Telemetry_TelemetryServiceSubscribePositionCallTestStub()
@@ -28,7 +30,17 @@ class TelemetryTest: XCTestCase {
 
         checkPositionObservableReceivesEvents(positions: positions)
     }
+    
+    func testPositionObservableReceivesMultipleEvents() {
+        var positions = [Dronecore_Rpc_Telemetry_Position]()
+        positions.append(createRPCPosition(latitudeDeg: 41.848695, longitudeDeg: 75.132751, absoluteAltitudeM: 3002.1, relativeAltitudeM: 50.3));
+        positions.append(createRPCPosition(latitudeDeg: 46.522626, longitudeDeg: 6.635356, absoluteAltitudeM: 542.2, relativeAltitudeM: 79.8));
+        positions.append(createRPCPosition(latitudeDeg: -50.995944711358824, longitudeDeg: -72.99892046835936, absoluteAltitudeM: 1217.12, relativeAltitudeM: 2.52));
+        
+        checkPositionObservableReceivesEvents(positions: positions)
+    }
 
+    // MARK: Utils
     func createRPCPosition(latitudeDeg: Double, longitudeDeg: Double, absoluteAltitudeM: Float, relativeAltitudeM: Float) -> Dronecore_Rpc_Telemetry_Position {
         var position = Dronecore_Rpc_Telemetry_Position()
         position.latitudeDeg = latitudeDeg
@@ -77,15 +89,9 @@ class TelemetryTest: XCTestCase {
         return Position(latitudeDeg: positionRPC.latitudeDeg, longitudeDeg: positionRPC.longitudeDeg, absoluteAltitudeM: positionRPC.absoluteAltitudeM, relativeAltitudeM: positionRPC.relativeAltitudeM)
     }
 
-    func testPositionObservableReceivesMultipleEvents() {
-        var positions = [Dronecore_Rpc_Telemetry_Position]()
-        positions.append(createRPCPosition(latitudeDeg: 41.848695, longitudeDeg: 75.132751, absoluteAltitudeM: 3002.1, relativeAltitudeM: 50.3));
-        positions.append(createRPCPosition(latitudeDeg: 46.522626, longitudeDeg: 6.635356, absoluteAltitudeM: 542.2, relativeAltitudeM: 79.8));
-        positions.append(createRPCPosition(latitudeDeg: -50.995944711358824, longitudeDeg: -72.99892046835936, absoluteAltitudeM: 1217.12, relativeAltitudeM: 2.52));
+   
 
-        checkPositionObservableReceivesEvents(positions: positions)
-    }
-
+    // MARK: - HEALTH
     func testHealthObservableEmitsNothingWhenNoEvent() {
         let fakeService = Dronecore_Rpc_Telemetry_TelemetryServiceServiceTestStub()
         let fakeCall = Dronecore_Rpc_Telemetry_TelemetryServiceSubscribeHealthCallTestStub()
@@ -105,7 +111,12 @@ class TelemetryTest: XCTestCase {
     func testHealthObservableReceivesOneEvent() {
         checkHealthObservableReceivesEvents(nbEvents: 1)
     }
+    
+    func testHealthObservableReceivesMultipleEvents() {
+        checkHealthObservableReceivesEvents(nbEvents: 10)
+    }
 
+    // MARK: Utils
     func createRandomRPCHealth() -> Dronecore_Rpc_Telemetry_Health {
         var health = Dronecore_Rpc_Telemetry_Health()
 
@@ -166,8 +177,25 @@ class TelemetryTest: XCTestCase {
     func translateRPCHealth(healthRPC: Dronecore_Rpc_Telemetry_Health) -> Health {
         return Health(isGyrometerCalibrationOk: healthRPC.isGyrometerCalibrationOk, isAccelerometerCalibrationOk: healthRPC.isAccelerometerCalibrationOk, isMagnetometerCalibrationOk: healthRPC.isMagnetometerCalibrationOk, isLevelCalibrationOk: healthRPC.isLevelCalibrationOk, isLocalPositionOk: healthRPC.isLocalPositionOk, isGlobalPositionOk: healthRPC.isGlobalPositionOk, isHomePositionOk: healthRPC.isHomePositionOk)
     }
-
-    func testHealthObservableReceivesMultipleEvents() {
-        checkHealthObservableReceivesEvents(nbEvents: 10)
+    
+    // MARK: - HOME POSITION
+    func testHomePositionObservable() {
+        let fakeService = Dronecore_Rpc_Telemetry_TelemetryServiceServiceTestStub()
+        let fakeCall = Dronecore_Rpc_Telemetry_TelemetryServiceSubscribeHomeCallTestStub()
+        fakeService.subscribehomeCalls.append(fakeCall)
+        
+        let telemetry = Telemetry(service: fakeService, scheduler: self.scheduler)
+        let scheduler = TestScheduler(initialClock: 0)
+        let observer = scheduler.createObserver(Position.self)
+        
+        let _ = telemetry.getHomePositionObservable().subscribe(observer)
+        scheduler.start()
+        observer.onCompleted()
+        
+        XCTAssertEqual(1, observer.events.count) // "completed" is one event
     }
+    
+
+
+    
 }
